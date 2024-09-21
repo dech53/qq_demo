@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>文件传输</title>
+  </head>
+  <body>
+    <input type="file" id="file" name="file" />
+    <button onclick="sendFile()">传输文件</button>
+
+    <script>
+      var ws = new WebSocket("ws://localhost:1226/ws/chat");
+
+      ws.onopen = function () {
+        console.log("已连接");
+      };
+
+      ws.onmessage = function (e) {
+        console.log("接收到消息:", e.data);
+        // 处理接收到的文件数据
+      };
+
+      ws.onclose = function () {
+        console.log("连接已关闭");
+      };
+
+      function sendFile() {
+        var fileInput = document.getElementById("file");
+        var file = fileInput.files[0];
+
+        if (file) {
+          var reader = new FileReader();
+          reader.readAsArrayBuffer(file); // 使用 ArrayBuffer
+
+          reader.onload = function (e) {
+            var fileData = e.target.result;
+            console.log(fileData);
+            // 创建 SendMessage 对象
+            var message = {
+              type: 2,
+              id: 1, // 根据需要设置 ID
+              to_id: 2, // 根据需要设置 ToID
+              data: fileData,
+              filename: file.name, // 文件名
+              mimeType: file.type, // 文件的 MIME 类型
+            };
+
+            // 将 ArrayBuffer 转换为 base64 字符串
+            var base64Data = arrayBufferToBase64(fileData);
+            message.data = base64Data; // 将数据替换为 base64 字符串
+            console.log(base64Data); // 打印出来，检查base64格式
+            // 发送消息
+            ws.send(JSON.stringify(message));
+          };
+        }
+      }
+
+      // 将 ArrayBuffer 转换为 base64 字符串的函数
+      function arrayBufferToBase64(buffer) {
+        var binary = "";
+        var bytes = new Uint8Array(buffer);
+        var len = bytes.byteLength;
+        for (var i = 0; i < len; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        return window.btoa(binary); // base64 编码
+      }
+    </script>
+  </body>
+</html>
