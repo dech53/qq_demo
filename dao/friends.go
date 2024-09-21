@@ -77,3 +77,14 @@ func GetFriends(user *model.User, friends *[]model.User) error {
 	}
 	return nil
 }
+func VerifyFriends(msg *model.SendMessage) bool {
+	var relation model.Relation
+	// 查找包含好友关系的记录
+	result := DB.Where("ID_1 = ? AND ID_2 = ?", msg.ID, msg.ToID).
+		Or("ID_1 = ? AND ID_2 = ?", msg.ToID, msg.ID).
+		Find(&relation)
+	if result.RowsAffected > 0 {
+		return true
+	}
+	return false
+}

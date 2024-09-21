@@ -93,26 +93,30 @@ func ClientTask() {
 		case message := <-ChatRoom.Broadcast:
 			client1 := ChatRoom.Clients[message.ToID]
 			client2 := ChatRoom.Clients[message.ID]
-			//消息类型非好友申请
-			if message.Type != 4 && message.Type != 5 {
-				if client1 == nil {
-					utils.WriteKafka(message, ctx, strconv.Itoa(client2.ID))
-					utils.WriteKafka(message, ctx, strconv.Itoa(message.ToID))
-				} else {
-					utils.WriteKafka(message, ctx, strconv.Itoa(client2.ID))
-					utils.WriteKafka(message, ctx, strconv.Itoa(client1.ID))
-				}
+			if string(message.Data) == `"该用户不是你的好友"` {
+				utils.WriteKafka(message, ctx, strconv.Itoa(message.ID))
 			} else {
-				if message.Type == 4 {
+				//消息类型非好友申请
+				if message.Type != 4 && message.Type != 5 {
 					if client1 == nil {
+						utils.WriteKafka(message, ctx, strconv.Itoa(client2.ID))
 						utils.WriteKafka(message, ctx, strconv.Itoa(message.ToID))
 					} else {
+						utils.WriteKafka(message, ctx, strconv.Itoa(client2.ID))
 						utils.WriteKafka(message, ctx, strconv.Itoa(client1.ID))
 					}
 				} else {
-					utils.WriteKafka(message, ctx, strconv.Itoa(message.ID))
-				}
+					if message.Type == 4 {
+						if client1 == nil {
+							utils.WriteKafka(message, ctx, strconv.Itoa(message.ToID))
+						} else {
+							utils.WriteKafka(message, ctx, strconv.Itoa(client1.ID))
+						}
+					} else {
+						utils.WriteKafka(message, ctx, strconv.Itoa(message.ID))
+					}
 
+				}
 			}
 
 		}
