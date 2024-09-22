@@ -77,6 +77,7 @@ func Read(client *model.Client, chatroom *model.Chat) {
 				msg.Data = bytes.Replace(msg.Data, []byte("\\u0026"), []byte("&"), -1)
 				chatroom.Broadcast <- &msg
 			case 3: // 视频消息
+			//视频消息通过upload后返回访问链接,实际和文本消息一致
 				log.Println("视频消息,URL:", msg.Data)
 				//判断文件大小选择如何上传
 				//生成文件访问链接

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频上传测试</title>
+</head>
+<body>
+    <h1>上传视频文件</h1>
+    
+    <!-- 文件上传表单 -->
+    <form id="uploadForm" enctype="multipart/form-data">
+        <label for="sender_id">发送者 ID:</label>
+        <input type="text" id="sender_id" name="sender_id" placeholder="输入发送者ID" required><br><br>
+
+        <label for="receiver_id">接收者 ID:</label>
+        <input type="text" id="receiver_id" name="receiver_id" placeholder="输入接收者ID" required><br><br>
+
+        <label for="file">选择视频文件:</label>
+        <input type="file" id="file" name="file" accept="video/*" required><br><br>
+
+        <button type="button" onclick="uploadVideo()">上传</button>
+    </form>
+
+    <div id="result">
+        <!-- 上传结果展示 -->
+    </div>
+
+    <script>
+        async function uploadVideo() {
+            const form = document.getElementById('uploadForm');
+            const formData = new FormData(form);
+
+            try {
+                // 发送POST请求到后端
+                const response = await fetch('http://localhost:1226/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    console.error("服务器返回的错误:", error);
+                    document.getElementById('result').innerHTML = `<p>上传失败: ${error.error}</p>`;
+                    return;
+                }
+
+                // 获取服务器返回的结果
+                const result = await response.json();
+                console.log("服务器返回的信息:", result);
+
+                // 在页面中展示上传的 MinIO 链接
+                document.getElementById('result').innerHTML = `<p>上传成功！<br>视频链接: <a href="${result}" target="_blank">${result}</a></p>`;
+
+            } catch (err) {
+                console.error("请求失败:", err);
+                document.getElementById('result').innerHTML = `<p>上传失败: ${err.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

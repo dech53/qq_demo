@@ -2,14 +2,19 @@ package api
 
 import (
 	"context"
-	"github.com/dgrijalva/jwt-go"
-	"github.com/gin-gonic/gin"
+	"fmt"
 	"log"
+	"net/http"
+	"path/filepath"
 	"qq_demo/dao"
 	"qq_demo/middleware"
 	"qq_demo/model"
 	"qq_demo/utils"
 	"time"
+
+	"github.com/dgrijalva/jwt-go"
+	"github.com/gin-gonic/gin"
+	"github.com/minio/minio-go/v7"
 )
 
 var ctx = context.Background()
@@ -96,4 +101,49 @@ func GetUserInfo(c *gin.Context) {
 		Friends: friends,
 	}
 	utils.ResponseSuccess(c, personal, 200)
+}
+func Upload(c *gin.Context) {
+	// 获取文件和其他参数（发送者ID、接收者ID）
+	file, err := c.FormFile("file")
+	if err != nil {
+		log.Println("获取文件失败:", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无法获取文件"})
+		return
+	}
+
+	senderID := c.PostForm("sender_id")     // 发送者ID
+	receiverID := c.PostForm("receiver_id") // 接收者ID
+	fileExt := filepath.Ext(file.Filename)  // 获取文件扩展名
+
+	// 生成唯一的文件名
+	fileName := fmt.Sprintf("%s_%s_%d%s", senderID, receiverID, time.Now().Unix(), fileExt)
+	filePath := "./uploads/" + fileName // 本地存储路径
+
+	// 保存文件到本地目录
+	err = c.SaveUploadedFile(file, filePath)
+	if err != nil {
+		log.Println("保存文件失败:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "文件保存失败"})
+		return
+	}
+	log.Println("文件已保存到:", filePath)
+	// 上传文件到 MinIO
+	ctx := context.Background()
+	objectName := fmt.Sprintf("/message/%s/%s/%s", senderID, receiverID, fileName)
+	uploadInfo, err := dao.MinioClient.FPutObject(ctx, "test", objectName, filePath, minio.PutObjectOptions{ContentType: file.Header.Get("Content-Type")})
+	if err != nil {
+		log.Println("上传到 MinIO 失败:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "文件上传失败"})
+		return
+	}
+	log.Printf("文件上传成功: %s, 大小: %d 字节\n", uploadInfo.Key, uploadInfo.Size)
+	// 生成文件访问链接
+	presignedURL, err := dao.MinioClient.PresignedGetObject(ctx, "test", objectName, time.Minute*10, nil)
+	if err != nil {
+		log.Println("生成文件访问链接失败:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "生成链接失败"})
+		return
+	}
+	log.Print(presignedURL)
+	utils.ResponseSuccess(c, presignedURL, 200)
 }

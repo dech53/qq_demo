@@ -16,5 +16,6 @@ func InitRouter() {
 	}
 	//开启websocket连接
 	r.GET("/ws/chat",StartWsChat)
+	r.POST("/upload",Upload)
 	r.Run(":1226")
 }
